@@ -188,7 +188,69 @@ button:hover {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+#suggestBox {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
 
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+
+    border-radius: 12px;
+    margin-top: 6px;
+
+    max-height: 220px;
+    overflow-y: auto;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    border: 1px solid rgba(0,0,0,0.05);
+
+    display: none;
+    z-index: 9999;
+
+    animation: fadeDrop 0.2s ease;
+}
+
+/* item suggestion */
+#suggestBox div {
+    padding: 10px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    margin: 4px 6px;
+    transition: 0.2s;
+    color: #111;
+}
+
+/* hover effect */
+#suggestBox div:hover {
+    background: #0f766e;
+    color: white;
+    transform: translateX(4px);
+}
+
+/* animasi muncul */
+@keyframes fadeDrop {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* scrollbar cakep */
+#suggestBox::-webkit-scrollbar {
+    width: 6px;
+}
+
+#suggestBox::-webkit-scrollbar-thumb {
+    background: #0f766e;
+    border-radius: 10px;
+}
 
 
 
@@ -206,17 +268,32 @@ button:hover {
 
 <div class="container">
 
-<h1>Survey Kualitas Audio Masjid Nurul Muhajirin Guntung Payung Banjarbaru</h1>
+<h1>Survey Kualitas Audio Masjid Banjarbaru</h1>
 
 
 <!-- DATA DIRI -->
+<div style="position:relative;">
+    <input type="text" id="namaMasjid" placeholder="Nama Masjid" autocomplete="off">
+    <div id="suggestBox" style="
+        position:absolute;
+        background:white;
+        color:black;
+        width:100%;
+        border-radius:8px;
+        margin-top:2px;
+        display:none;
+        max-height:150px;
+        overflow:auto;
+        z-index:9999;
+    "></div>
+</div>
 <input type="text" placeholder="Nama">
 <input type="text" placeholder="Alamat">
 <input type="number" placeholder="Nomor HP">
 
 <!-- PERTANYAAN -->
 <div class="question">
-1. Apakah suara yang anda dengar berasal dari depan?
+1. Apakah anda merasa, suara yang anda dengar berasal dari depan? 
 <div class="options">
 <label><input type="radio" name="q1" value="ya"> Ya</label>
 <label><input type="radio" name="q1" value="tidak"> Tidak</label>
@@ -242,7 +319,7 @@ button:hover {
 </div>
 
 <div class="question">
-4. Apakah anda suka effect pantul / echo?
+4. Apakah anda suka effect pantul / echo? ( dengarkan contoh suara )
 
 <div style="
     display:flex;
@@ -358,16 +435,16 @@ function playEcho(){
 }
 window.playEcho = playEcho;
 function kirim(){
-
     let nama = document.querySelector("input[placeholder='Nama']").value;
-let alamat = document.querySelector("input[placeholder='Alamat']").value;
-let hp = document.querySelector("input[placeholder='Nomor HP']").value;
+    let namamasjid = document.getElementById("namaMasjid").value;
+    let alamat = document.querySelector("input[placeholder='Alamat']").value;
+    let hp = document.querySelector("input[placeholder='Nomor HP']").value;
 
 // ambil alasan echo
 let alasanEcho = document.getElementById("alasanEcho").value;
 
 // ambil saran
-let saran = document.getElementById("saran").value;
+let saran = document.getElementById("saran").value = "";
 
 let q1 = document.querySelector("input[name='q1']:checked");
 let q2 = document.querySelector("input[name='q2']:checked");
@@ -375,7 +452,7 @@ let q3 = document.querySelector("input[name='q3']:checked");
 let q4 = document.querySelector("input[name='q4']:checked");
 let q5 = document.querySelector("input[name='q5']:checked");
 	
-    if(!nama || !alamat || !hp || !q1 || !q2 || !q3 || !q4 || !q5){
+   if(!nama || !namamasjid || !alamat || !hp || !q1 || !q2 || !q3 || !q4 || !q5){
     Swal.fire({
         icon: "warning",
         title: "Belum Lengkap 😁",
@@ -412,6 +489,9 @@ Swal.fire({
 
 push(ref(db, "survey"), {
     nama,
+    namamasjid: semuaMasjid.find(m =>
+    normalizeMasjid(m) === normalizeMasjid(namamasjid)
+) ?? namamasjid,
     alamat,
     hp,
     q1: q1.value,
@@ -442,17 +522,27 @@ function loadData(){
         let arr = Object.values(data);
 
         let total = arr.length;
-
         let totalRating = 0;
 
-        arr.forEach(d=>{
+        arr.forEach(d => {
             totalRating += d.rating;
         });
 
         console.log("Rata-rata rating:", (totalRating / total).toFixed(1));
 
-    });
+        // 🔥 FIX: deklarasi lokal
+        let allData = Object.entries(data);
 
+        semuaMasjid = [];
+
+        allData.forEach(([_, d]) => {
+            if(d.namamasjid){
+                semuaMasjid.push(d.namamasjid);
+            }
+        });
+
+        semuaMasjid = [...new Set(semuaMasjid)];
+    });
 }
 function animateValue(id, value, suffix){
     let el = document.getElementById(id);
@@ -474,8 +564,18 @@ function animateValue(id, value, suffix){
 
     requestAnimationFrame(animation);
 }
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+  getDatabase,
+  ref,
+  push,
+  onValue,
+  set,
+  remove
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyCsyPcWbiWzZGCemmEGL38b9jn-kw1pnSQ",
   authDomain: "service-elektronik-78ae1.firebaseapp.com",
@@ -487,7 +587,26 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-import { set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+
+
+
+let semuaMasjid = [];
+let allData = [];
+
+onValue(ref(db, "survey"), (snapshot) => {
+    let data = snapshot.val();
+    if(!data) return;
+
+    semuaMasjid = Object.values(data)
+        .map(d => d.namamasjid)
+        .filter(Boolean);
+
+    semuaMasjid = [...new Set(semuaMasjid)];
+});
+const inputMasjid = document.getElementById("namaMasjid");
+
+
 
 const typingRef = ref(db, "typing/user");
 
@@ -536,11 +655,47 @@ function showLoadingRedirect(teks){
         window.location.href = "https://kaffahstorage-stack.github.io/WiracomBanjarbaru-Update1/";
     }, 2000);
 }
+document.getElementById("namaMasjid").value = "";
+
+function normalizeMasjid(name) {
+    return (name || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^a-z0-9]/g, "");
+}
 
 
 
+inputMasjid.addEventListener("input", () => {
 
+    let value = inputMasjid.value.toLowerCase().trim();
 
+    if(!value){
+        suggestBox.style.display = "none";
+        return;
+    }
+
+    let hasil = semuaMasjid.filter(m =>
+        m.toLowerCase().includes(value)
+    );
+
+    suggestBox.innerHTML = "";
+
+    hasil.forEach(item => {
+        let div = document.createElement("div");
+        div.innerText = item;
+
+        div.onclick = () => {
+            inputMasjid.value = item;
+            suggestBox.style.display = "none";
+        };
+
+        suggestBox.appendChild(div);
+    });
+
+    suggestBox.style.display = "block";
+});
+window.playEcho = playEcho;
 
 
 
